@@ -5,7 +5,7 @@ from sentence_transformers import SentenceTransformer
 import os
 
 # --- CONFIGURATION ---
-CSV_PATH = r"C:\Desktop\new desk\gamelecturenotes\BIG_DATA_PROJECT\data\processed\Final_Merged_Dataset.csv"
+CSV_PATH = r"data\processed\Final_Merged_Dataset.csv"
 OUTPUT_PKL_PATH = "books_vectors.pkl"
 MODEL_NAME = 'all-MiniLM-L6-v2'
 
