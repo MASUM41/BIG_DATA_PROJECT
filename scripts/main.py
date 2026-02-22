@@ -158,7 +158,7 @@ def sync_database():
     if not os.path.exists(CSV_SOURCE):
         raise HTTPException(status_code=500, detail="Source CSV not found")
     try:
-        df = pd.read_csv(CSV_SOURCE, encoding="latin-1", on_bad_lines='skip')
+        df = pd.read_csv(CSV_SOURCE, encoding="latin-1", on_bad_lines='skip',nrows=5000)
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
         cursor.execute("DROP TABLE IF EXISTS books")

@@ -5,7 +5,7 @@ from sentence_transformers import SentenceTransformer
 import os
 
 # --- CONFIGURATION ---
-CSV_PATH = r"data\processed\Final_Merged_Dataset.csv"
+CSV_PATH = "data\processed\Final_Merged_Dataset.csv"
 OUTPUT_PKL_PATH = "books_vectors.pkl"
 MODEL_NAME = 'all-MiniLM-L6-v2'
 
@@ -16,7 +16,7 @@ def generate_vectors():
         return
 
     print(f"📖 Reading CSV from {CSV_PATH}...")
-    df = pd.read_csv(CSV_PATH, encoding="latin-1", on_bad_lines='skip')
+    df = pd.read_csv(CSV_PATH, encoding="latin-1", on_bad_lines='skip',nrows=5000) 
     
     # 2. Data Cleaning (Crucial for AI)
     # Fill empty descriptions with blank strings so the AI doesn't crash
