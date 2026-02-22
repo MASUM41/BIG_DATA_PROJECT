@@ -15,41 +15,37 @@ VECTORS_PATH = "books_vectors.pkl"
 MODEL_NAME = 'all-MiniLM-L6-v2'
 
 # --- GLOBAL VARIABLES (The AI Brain) ---
-# These sit in RAM so they are fast to access
 ai_model = None
 book_vectors = None
 book_df = None
 
-# --- LIFESPAN MANAGER (Starts when you run uvicorn) ---
-@asynccontextmanager
-async def lifespan(app: FastAPI):
+# --- NEW: LAZY LOADER FUNCTION ---
+def wake_up_ai():
+    """Loads the AI only when someone actually asks for a recommendation."""
     global ai_model, book_vectors, book_df
     
-    print("⏳ Starting up... Loading AI Model & Vectors...")
-    
-    try:
-        # 1. Load the Sentence Transformer
-        ai_model = SentenceTransformer(MODEL_NAME)
-        
-        # 2. Load the Pickle File (Vectors)
-        if os.path.exists(VECTORS_PATH):
-            with open(VECTORS_PATH, "rb") as f:
-                data = pickle.load(f)
-                book_df = data["dataframe"]
-                book_vectors = data["embeddings"]
-            print("✅ AI System Ready! /recommend endpoint is active.")
-        else:
-            print("⚠️ Warning: books_vectors.pkl not found. Run generate_embeddings.py first.")
-            
-    except Exception as e:
-        print(f"❌ Error loading AI: {e}")
-        
-    yield  # The application runs here
-    
-    # Clean up when server stops
+    if ai_model is None:
+        print("⏳ Lazy Loading: Waking up the AI Model (This will take a minute)...")
+        try:
+            ai_model = SentenceTransformer(MODEL_NAME)
+            if os.path.exists(VECTORS_PATH):
+                with open(VECTORS_PATH, "rb") as f:
+                    data = pickle.load(f)
+                    book_df = data["dataframe"]
+                    book_vectors = data["embeddings"]
+                print("✅ AI System Successfully Awakened!")
+            else:
+                print("⚠️ Warning: books_vectors.pkl not found.")
+        except Exception as e:
+            print(f"❌ Error loading AI: {e}")
+
+# --- LIFESPAN MANAGER (Now ultra-fast) ---
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # We don't load the AI here anymore so the server boots instantly!
+    print("⚡ Fast boot mode active! Server is opening the port immediately.")
+    yield 
     print("🛑 Server shutting down...")
-    del ai_model
-    del book_vectors
 
 app = FastAPI(
     title="Book Library AI API",
@@ -74,7 +70,7 @@ def get_db():
 # -----------------------------
 @app.get("/")
 def root():
-    ai_status = "active" if ai_model is not None else "inactive"
+    ai_status = "active" if ai_model is not None else "sleeping (will wake on first request)"
     return {"status": "online", "ai_engine": ai_status}
 
 # -----------------------------
@@ -86,6 +82,94 @@ def get_books(limit: int = 20, offset: int = 0, db: sqlite3.Connection = Depends
     cursor.execute("SELECT * FROM books LIMIT ? OFFSET ?", (limit, offset))
     rows = [dict(row) for row in cursor.fetchall()]
     return {"count": len(rows), "data": rows}
+# from fastapi import FastAPI, HTTPException, Query, Depends
+# from contextlib import asynccontextmanager
+# import sqlite3
+# import pandas as pd
+# import os
+# import pickle
+# import numpy as np
+# from sentence_transformers import SentenceTransformer
+# from typing import List, Dict, Any
+
+# # --- CONFIGURATION ---
+# DB_PATH = "data/db.sqlite3"
+# CSV_SOURCE = "data/processed/Final_Merged_Dataset.csv"
+# VECTORS_PATH = "books_vectors.pkl"
+# MODEL_NAME = 'all-MiniLM-L6-v2'
+
+# # --- GLOBAL VARIABLES (The AI Brain) ---
+# # These sit in RAM so they are fast to access
+# ai_model = None
+# book_vectors = None
+# book_df = None
+
+# # --- LIFESPAN MANAGER (Starts when you run uvicorn) ---
+# @asynccontextmanager
+# async def lifespan(app: FastAPI):
+#     global ai_model, book_vectors, book_df
+    
+#     print("⏳ Starting up... Loading AI Model & Vectors...")
+    
+#     try:
+#         # 1. Load the Sentence Transformer
+#         ai_model = SentenceTransformer(MODEL_NAME)
+        
+#         # 2. Load the Pickle File (Vectors)
+#         if os.path.exists(VECTORS_PATH):
+#             with open(VECTORS_PATH, "rb") as f:
+#                 data = pickle.load(f)
+#                 book_df = data["dataframe"]
+#                 book_vectors = data["embeddings"]
+#             print("✅ AI System Ready! /recommend endpoint is active.")
+#         else:
+#             print("⚠️ Warning: books_vectors.pkl not found. Run generate_embeddings.py first.")
+            
+#     except Exception as e:
+#         print(f"❌ Error loading AI: {e}")
+        
+#     yield  # The application runs here
+    
+#     # Clean up when server stops
+#     print("🛑 Server shutting down...")
+#     del ai_model
+#     del book_vectors
+
+# app = FastAPI(
+#     title="Book Library AI API",
+#     description="Phase 2: Hybrid Search (SQL) + Semantic Recommendation (AI)",
+#     version="2.0.0",
+#     lifespan=lifespan
+# )
+
+# # -----------------------------
+# # Dependency: Database Session
+# # -----------------------------
+# def get_db():
+#     conn = sqlite3.connect(DB_PATH)
+#     conn.row_factory = sqlite3.Row
+#     try:
+#         yield conn
+#     finally:
+#         conn.close()
+
+# # -----------------------------
+# # 1. Health Check
+# # -----------------------------
+# @app.get("/")
+# def root():
+#     ai_status = "active" if ai_model is not None else "inactive"
+#     return {"status": "online", "ai_engine": ai_status}
+
+# # -----------------------------
+# # 2. Get Books (SQL Pagination)
+# # -----------------------------
+# @app.get("/books")
+# def get_books(limit: int = 20, offset: int = 0, db: sqlite3.Connection = Depends(get_db)):
+#     cursor = db.cursor()
+#     cursor.execute("SELECT * FROM books LIMIT ? OFFSET ?", (limit, offset))
+#     rows = [dict(row) for row in cursor.fetchall()]
+#     return {"count": len(rows), "data": rows}
 
 # -----------------------------
 # 3. Keyword Search (SQL LIKE)
@@ -106,36 +190,56 @@ def search_books(q: str = Query(..., min_length=3), db: sqlite3.Connection = Dep
 # -----------------------------
 # 4. AI Recommendation (Semantic Search)
 # -----------------------------
+# -----------------------------
+# 4. AI Recommendation (Semantic Search)
+# -----------------------------
 @app.post("/recommend")
 def recommend_books(user_query: str):
     """
     Input: "I want a sad story about space travel"
     Output: Top 5 books that match the MEANING (vectors).
     """
+    # Wake up the AI if it is sleeping!
+    if ai_model is None:
+        wake_up_ai()
+
     if ai_model is None or book_vectors is None:
         raise HTTPException(status_code=503, detail="AI System is not loaded.")
 
     # 1. Convert User Query to Vector
     query_vector = ai_model.encode([user_query])
     
-    # 2. Calculate Similarity (Dot Product)
-    scores = np.dot(book_vectors, query_vector.T).flatten()
+    # ... (Keep the rest of your recommendation code exactly the same)
+# @app.post("/recommend")
+# def recommend_books(user_query: str):
+#     """
+#     Input: "I want a sad story about space travel"
+#     Output: Top 5 books that match the MEANING (vectors).
+#     """
+#     if ai_model is None or book_vectors is None:
+#         raise HTTPException(status_code=503, detail="AI System is not loaded.")
+
+#     # 1. Convert User Query to Vector
+#     query_vector = ai_model.encode([user_query])
     
-    # 3. Get Top 5 Indices
-    top_indices = np.argsort(scores)[-5:][::-1]
+#     # 2. Calculate Similarity (Dot Product)
+#     scores = np.dot(book_vectors, query_vector.T).flatten()
     
-    # 4. Retrieve Book Details from DataFrame (Fast RAM lookup)
-    results = []
-    for idx in top_indices:
-        book = book_df.iloc[idx]
-        results.append({
-            "title": str(book['Title']),
-            "author": str(book['Author_Editor']),
-            "description": str(book['description'])[:200] + "...", # Truncate for clean display
-            "score": float(f"{scores[idx]:.4f}")
-        })
+#     # 3. Get Top 5 Indices
+#     top_indices = np.argsort(scores)[-5:][::-1]
+    
+#     # 4. Retrieve Book Details from DataFrame (Fast RAM lookup)
+#     results = []
+#     for idx in top_indices:
+#         book = book_df.iloc[idx]
+#         results.append({
+#             "title": str(book['Title']),
+#             "author": str(book['Author_Editor']),
+#             "description": str(book['description'])[:200] + "...", # Truncate for clean display
+#             "score": float(f"{scores[idx]:.4f}")
+#         })
         
-    return {"query": user_query, "recommendations": results}
+#     return {"query": user_query, "recommendations": results}
 
 # -----------------------------
 # 5. Get Book by ISBN
