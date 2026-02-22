@@ -1,11 +1,8 @@
 from fastapi import FastAPI, HTTPException, Query, Depends
 from contextlib import asynccontextmanager
 import sqlite3
-import pandas as pd
 import os
-import pickle
 import numpy as np
-from sentence_transformers import SentenceTransformer
 from typing import List, Dict, Any
 
 # --- CONFIGURATION ---
@@ -27,6 +24,12 @@ def wake_up_ai():
     if ai_model is None:
         print("⏳ Lazy Loading: Waking up the AI Model (This will take a minute)...")
         try:
+            # 🟢 WE MOVED THE HEAVY IMPORTS HERE! 
+            # Now the server won't freeze when it boots up!
+            import pickle
+            import pandas as pd
+            from sentence_transformers import SentenceTransformer
+            
             ai_model = SentenceTransformer(MODEL_NAME)
             if os.path.exists(VECTORS_PATH):
                 with open(VECTORS_PATH, "rb") as f:
@@ -42,7 +45,6 @@ def wake_up_ai():
 # --- LIFESPAN MANAGER (Now ultra-fast) ---
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # We don't load the AI here anymore so the server boots instantly!
     print("⚡ Fast boot mode active! Server is opening the port immediately.")
     yield 
     print("🛑 Server shutting down...")
@@ -53,6 +55,61 @@ app = FastAPI(
     version="2.0.0",
     lifespan=lifespan
 )
+# from fastapi import FastAPI, HTTPException, Query, Depends
+# from contextlib import asynccontextmanager
+# import sqlite3
+# import pandas as pd
+# import os
+# import pickle
+# import numpy as np
+# from sentence_transformers import SentenceTransformer
+# from typing import List, Dict, Any
+
+# # --- CONFIGURATION ---
+# DB_PATH = "data/db.sqlite3"
+# CSV_SOURCE = "data/processed/Final_Merged_Dataset.csv"
+# VECTORS_PATH = "books_vectors.pkl"
+# MODEL_NAME = 'all-MiniLM-L6-v2'
+
+# # --- GLOBAL VARIABLES (The AI Brain) ---
+# ai_model = None
+# book_vectors = None
+# book_df = None
+
+# # --- NEW: LAZY LOADER FUNCTION ---
+# def wake_up_ai():
+#     """Loads the AI only when someone actually asks for a recommendation."""
+#     global ai_model, book_vectors, book_df
+    
+#     if ai_model is None:
+#         print("⏳ Lazy Loading: Waking up the AI Model (This will take a minute)...")
+#         try:
+#             ai_model = SentenceTransformer(MODEL_NAME)
+#             if os.path.exists(VECTORS_PATH):
+#                 with open(VECTORS_PATH, "rb") as f:
+#                     data = pickle.load(f)
+#                     book_df = data["dataframe"]
+#                     book_vectors = data["embeddings"]
+#                 print("✅ AI System Successfully Awakened!")
+#             else:
+#                 print("⚠️ Warning: books_vectors.pkl not found.")
+#         except Exception as e:
+#             print(f"❌ Error loading AI: {e}")
+
+# # --- LIFESPAN MANAGER (Now ultra-fast) ---
+# @asynccontextmanager
+# async def lifespan(app: FastAPI):
+#     # We don't load the AI here anymore so the server boots instantly!
+#     print("⚡ Fast boot mode active! Server is opening the port immediately.")
+#     yield 
+#     print("🛑 Server shutting down...")
+
+# app = FastAPI(
+#     title="Book Library AI API",
+#     description="Phase 2: Hybrid Search (SQL) + Semantic Recommendation (AI)",
+#     version="2.0.0",
+#     lifespan=lifespan
+# )
 
 # -----------------------------
 # Dependency: Database Session
