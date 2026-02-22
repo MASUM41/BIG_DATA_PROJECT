@@ -2,7 +2,8 @@ import streamlit as st
 import requests
 
 # --- CONFIGURATION ---
-API_URL = "http://127.0.0.1:8000"
+# API_URL = "http://127.0.0.1:8000"
+API_URL = "https://big-data-project-o8fq.onrender.com"
 
 # --- PAGE SETUP ---
 st.set_page_config(page_title="Library AI", page_icon="📚", layout="wide")
