@@ -9,8 +9,8 @@ from sentence_transformers import SentenceTransformer
 from typing import List, Dict, Any
 
 # --- CONFIGURATION ---
-DB_PATH = "data\db.sqlite3"
-CSV_SOURCE = "data\processed\Final_Merged_Dataset.csv"
+DB_PATH = "data/db.sqlite3"
+CSV_SOURCE = "data/processed/Final_Merged_Dataset.csv"
 VECTORS_PATH = "books_vectors.pkl"
 MODEL_NAME = 'all-MiniLM-L6-v2'
 
